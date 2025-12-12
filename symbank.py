@@ -25,7 +25,16 @@ tabela = ("""CREATE TABLE IF NOT EXISTS clientes (
           senha TEXT NOT NULL,
           saldo REAL NOT NULL)""")
 
+tabela_2 = (""" CREATE TABLE IF NOT EXISTS transacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titular TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            valor REAL NOT NULL,
+            data_hora TEXT NOT NULL,
+            FOREIGN KEY (titular) REFERENCES clientes(nome))""")
+
 cursor.execute(tabela)
+cursor.execute(tabela_2)
 conexao.commit()
 
 # PROGRAMAÇÃO DE CLASSE
@@ -36,7 +45,6 @@ class ContaBancaria:
         self.nome = nome_titular
         self.senha = senha_titular
         self.saldo = 0.0
-        self.extrato = []
     
     def depositar(self, valor):
         agora = datetime.datetime.now()
@@ -49,13 +57,13 @@ class ContaBancaria:
         else:
             self.saldo += valor
             cursor.execute("UPDATE clientes SET saldo = ? WHERE nome = ?", (self.saldo, self.nome))
+            data_completa = f"{data_format} às {hr_format}"
+            cursor.execute("INSERT INTO transacoes (titular, tipo, valor, data_hora) VALUES (?, ?, ?, ?)", (self.nome, "DEPÓSITO", valor, data_completa))
             conexao.commit()
             limpar_tela()
             print("Processando Depósito. \nAguarde um momento...")
             slp(3.5)
             limpar_tela()
-            msg_extrato = f"DEPÓSITO DE R${valor:.2f} EFETUADO às {hr_format} do dia {data_format}"
-            self.extrato.append(msg_extrato)
             return True, f"DEPÓSITO DE R${valor:.2f} EFETUADO COM SUCESSO!"
     
     def sacar(self, valor):
@@ -75,43 +83,52 @@ class ContaBancaria:
                 validacao = input("VALOR DE SAQUE SUPERIOR A R$200 \nPor favor, insira sua senha para prosseguir: ")
                 if validacao == self.senha:
                     limpar_tela()
+                    data_completa = f"{data_format} às {hr_format}"
                     self.saldo -= valor
                     cursor.execute("UPDATE clientes SET saldo = ? WHERE nome = ?", (self.saldo, self.nome))
+                    cursor.execute("INSERT INTO transacoes (titular, tipo, valor, data_hora) VALUES (?, ?, ?, ?)", (self.nome, "SAQUE", valor, data_completa))
                     conexao.commit()
                     print("Processando Saque. \nAguarde um momento...")
                     slp(3.8)
-                    msg_extrato = f"SAQUE DE R${valor:.2f} EFETUADO às {hr_format} do dia {data_format}"
-                    self.extrato.append(msg_extrato)
                     limpar_tela()
                     return True, f"SAQUE DE R${valor:.2f} EFETUADO COM SUCESSO!"
                 elif validacao != self.senha:
                     limpar_tela()
                     tentativas_senha += 1
                     print(f"PROTOCOLO C-002-02: Senha Inválida \nTentativas: {tentativas_senha}/3")
+                    input("Pressione ENTER para prosseguir...")
                     if tentativas_senha == 3:
+                        limpar_tela()
                         print(f"PROTOCOLO C-002-02: Senha Inválida \nNúmero de TENTATIVAS excedido. \nENCERRANDO APLICAÇÃO")
                         slp(2.5)
+                        limpar_tela()
                         return False, "ERRO E-001-03: Erro de Validação \nConsulte Documentação para Mais Detalhes. \nRetornando ao Menu..."
         else:
             limpar_tela()
+            data_completa = f"{data_format} às {hr_format}"
             self.saldo -= valor
             cursor.execute("UPDATE clientes SET saldo = ? WHERE nome = ?", (self.saldo, self.nome))
+            cursor.execute("INSERT INTO transacoes (titular, tipo, valor, data_hora) VALUES (?, ?, ?, ?)", (self.nome, "SAQUE", valor, data_completa))
             conexao.commit()
             print("Processando Saque. \nAguarde um momento...")
             slp(3.6)
-            msg_extrato = f"SAQUE DE R${valor:.2f} EFETUADO às {hr_format} do dia {data_format}"
-            self.extrato.append(msg_extrato)
             limpar_tela()
             return True, f"SAQUE DE R${valor:.2f} EFETUADO COM SUCESSO!"
     
     def ver_extrato(self):
         print("-" * 30)
-        print(f"EXTRATO DE: {self.nome}")
-        if not self.extrato:
+        print(f"EXTRATO DE: {self.nome.capitalize()}")
+
+        cursor.execute("SELECT tipo, valor, data_hora FROM transacoes WHERE titular = ? ORDER BY id DESC LIMIT 20", (self.nome,))
+        historico = cursor.fetchall()
+        if not historico:
             print("ERRO D-003-01: Histórico Vazio") 
         else:
-            for item in self.extrato[-20:]:
-                print(item)
+            for item in historico:
+                tipo = item[0]
+                valor = item[1]
+                data_hora = item[2]
+                print(f"{tipo} de R${valor:.2f} - {data_hora}")
 
 # MENU DE ACESSO PRINCIPAL
 
