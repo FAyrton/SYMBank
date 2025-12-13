@@ -117,7 +117,7 @@ class ContaBancaria:
     
     def ver_extrato(self):
         print("-" * 30)
-        print(f"EXTRATO DE: {self.nome.capitalize()}")
+        print(f"EXTRATO DE: {self.nome.capitalize()} \n")
 
         cursor.execute("SELECT tipo, valor, data_hora FROM transacoes WHERE titular = ? ORDER BY id DESC LIMIT 20", (self.nome,))
         historico = cursor.fetchall()
@@ -129,6 +129,48 @@ class ContaBancaria:
                 valor = item[1]
                 data_hora = item[2]
                 print(f"{tipo} de R${valor:.2f} - {data_hora}")
+
+    def transferir(self, destinatario, valor):
+        agora = datetime.datetime.now()
+        hr_format = agora.strftime("%H:%M:%S")
+        data_format = agora.strftime("%d/%m/%Y")
+        data_completa = f"{data_format} às {hr_format}"
+        if destinatario == self.nome:
+            return False, "ERRO D-004-02: Destinatário Idêntico ao Remetente"
+        elif self.saldo < valor:
+            return False, "ERRO D-001-02: Saldo Insuficiente"
+        elif valor == 0:
+            return False, "ERRO D-004-03: Valor de Transferência Vazio"
+        elif valor < 0:
+            return False, "ERRO D-004-04: Valor de Transferência Invalido"
+        elif valor == "":
+            return False, "ERRO D-004-04: Valor de Transferência Inválido"
+        cursor.execute("SELECT nome FROM clientes WHERE nome = ?", (destinatario,))
+        resultado = cursor.fetchone()
+        if resultado == None:
+            return None, "ERRO D-004-01: Destinatário Não Encontrado"
+        else:
+            validacao = input("Digite Sua Senha para Confirmar a Transferência: ")
+            if validacao == self.senha:
+                try:
+                    cursor.execute("UPDATE clientes SET saldo = saldo - ? WHERE nome = ?", (valor, self.nome))
+                    cursor.execute("UPDATE clientes SET saldo = saldo + ? WHERE nome = ?", (valor, destinatario))
+                    cursor.execute("INSERT INTO transacoes (titular, tipo, valor, data_hora) VALUES (?, ?, ?, ?)", (self.nome, "TRANSF. EFETUADA", valor, data_completa))
+                    cursor.execute("INSERT INTO transacoes (titular, tipo, valor, data_hora) VALUES (?, ?, ?, ?)", (destinatario, "TRANSF. RECEBIDA", valor, data_completa))
+                    conexao.commit()
+                    self.saldo -= valor
+                    limpar_tela()
+                    print("Realizando Transferência. \nAguarde um Momento...")
+                    slp(3.6)
+                    limpar_tela()
+                    return True, f"Transferência de R${valor:.2f} Realizada com Sucesso!"
+                except Exception as erro:
+                    conexao.rollback()
+                    return False, f"Erro na Operação: {erro}"
+            else:
+                limpar_tela()
+                print("PROTOCOLO C-002-02: Senha Inválida")
+                return False, f"ERRO E-001-03: Erro de Validação \nConsulte Documentação para Mais Detalhes. \nRetornando ao Menu..."
 
 # MENU DE ACESSO PRINCIPAL
 
@@ -187,9 +229,9 @@ def login(banco):
 while True:
     data_atual = data_atualizada()
     limpar_tela()
-    print("---------- SYMBank V1.0 ----------")
+    print("---------- SYMBank V3.0 ----------")
     print(f"Último Acesso: {data_atual}")
-    print("Boas-Vindas! Selecione uma das opções abaixo para prosseguir:")
+    print("Boas-Vindas! Selecione uma das opções abaixo para prosseguir: \n")
     print("[1] - Acessar Conta")
     print("[2] - Cadastrar Nova Conta")
     print("[3] - Encerrar Programa")
@@ -205,19 +247,23 @@ while True:
                 print("---------- PAINEL DE CONTROLE ----------")
                 print(f"Último Acesso: {data_atual}")
                 print(f"Conta: {user.capitalize()} \nSaldo Resgatado: R${banco[user].saldo:.2f}")
-                print("Boas-Vindas! Selecione uma das opções abaixo para prosseguir:")
-                print("[1] - Realizar depósito")
-                print("[2] - Realizar saque")
-                print("[3] - Ver Extrato de Conta")
-                print("[4] - Sair da Conta e Retornar ao Menu")
+                print("Boas-Vindas! Selecione uma das opções abaixo para prosseguir: \n")
+                print("[1] - Realizar Depósito")
+                print("[2] - Realizar Saque")
+                print("[3] - Realizar Transferência")
+                print("[4] - Ver Extrato de Conta")
+                print("[5] - Sair da Conta e Retornar ao Menu")
                 opcao_2 = input()
 
                 if opcao_2 == "1":
                     limpar_tela()
+                    print("---------- DEPÓSITO ---------- \n")
                     try:
                         val_dep = float(input("Digite Valor de Depósito: R$"))
                     except ValueError:
                         print("ERRO DETECTADO")
+                        slp(2)
+                        continue
                     sucesso, mensagem = banco[user].depositar(val_dep)
                     print(mensagem)
                     if sucesso:
@@ -227,11 +273,14 @@ while True:
                 
                 elif opcao_2 == "2":
                     limpar_tela()
+                    print("---------- SAQUE ---------- \n")
                     try:
                         val_saq = float(input("Digite Valor de Saque: R$"))
                         input("AVISO: Valores de Saque acima de R$200.00 EXIGIRÃO validação de senha \nPressione ENTER para continuar...")
                     except ValueError:
                         print("ERRO DETECTADO")
+                        slp(2)
+                        continue
                     sucesso, mensagem = banco[user].sacar(val_saq)
                     print(mensagem)
                     if sucesso:
@@ -241,13 +290,34 @@ while True:
 
                 elif opcao_2 == "3":
                     limpar_tela()
+                    print("---------- TRANSFERÊNCIA ---------- \n")
+                    cursor.execute("SELECT nome FROM clientes")
+                    todos_os_clientes = cursor.fetchall()
+                    for clientes in todos_os_clientes:
+                        print(f"Conta: {clientes[0].capitalize()} \n")
+                    destinatario = input("Para Quem Você Deseja TRASNFERIR? ").strip().lower()
+                    try:
+                        val_transfer = float(input("Digite Valor para Transferencia: R$"))
+                    except ValueError:
+                        print("ERRO DETECTADO")
+                        slp(2)
+                        continue
+                    sucesso, mensagem = banco[user].transferir(destinatario, val_transfer)
+                    print(mensagem)
+                    if sucesso:
+                        slp(2.5)
+                    else:
+                        input("Pressione ENTER para continuar...")
+
+                elif opcao_2 == "4":
+                    limpar_tela()
                     banco[user].ver_extrato()
                     print("-" * 30)
                     input("Pressione ENTER para continuar...")
                 
-                elif opcao_2 == "4":
+                elif opcao_2 == "5":
                     limpar_tela()
-                    print("---------- SAIR DA CONTA E RETORNAR AO MENU ----------")
+                    print("---------- SAIR DA CONTA E RETORNAR AO MENU ---------- \n")
                     print("Tem certeza que deseja sair da conta e retornar ao menu?")
                     print("[1] - Sim")
                     print("[2] - Não")
@@ -262,15 +332,14 @@ while True:
                         input("Pressione ENTER para continuar...")
                         pass
 
-
-                
+# CONTINUAÇÃO DO MENU PRINCIPAL           
     
     elif opcao == "2":
         cadastrar_conta()
     
     elif opcao == "3":
         limpar_tela()
-        print("---------- ENCERRAMENTO DE APLICAÇÃO ----------")
+        print("---------- ENCERRAMENTO DE APLICAÇÃO ---------- \n")
         print("Tem certeza que deseja sair?")
         print("[1] - Sim")
         print("[2] - Não")
