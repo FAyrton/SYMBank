@@ -174,6 +174,8 @@ class ContaBancaria:
 
 # MENU DE ACESSO PRINCIPAL
 
+banco = {}
+
 def cadastrar_conta():
     limpar_tela()
     print("---------- CADASTRO DE NOVA CONTA ----------")
