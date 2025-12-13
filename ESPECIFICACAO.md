@@ -44,6 +44,10 @@ Referente às regras de negócio de movimentação financeira.
 | **D-002-02** | Depósito Inválido (< 0) | Reaplicação. |
 | **D-003-01** | Histórico Vazio | Notificação "Histórico Vazio". |
 | **D-003-02** | Histórico Cheio | Paginação (Exibir últimos 20 itens). |
+| **D-004-01** | Destinatário Não Encontrado | Notificação de erro e Retorno ao menu. |
+| **D-004-02** | Destinatário Idêntico ao Remetente | Notificação de erro e Retorno ao menu. |
+| **D-004-03** | Transferência Vazia (R$ 0) | Reaplicação. |
+| **D-004-04** | Transferência Inválida (< 0) | Reaplicação. |
 
 ### ⚠️ Categoria E & F: Lógica e Desenvolvimento
 Códigos internos para debug e manutenção.
