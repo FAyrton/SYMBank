@@ -1,4 +1,4 @@
-# 🏦 SYMBank V2.0 - COM SQL!
+# 🏦 SYMBank V3.0 - COM SQL!
 
 Projeto de sistema bancário feito em PYTHON e a biblioteca nativa SQLite3 para persistência de dados!
 
@@ -6,9 +6,11 @@ Projeto de sistema bancário feito em PYTHON e a biblioteca nativa SQLite3 para 
 - Criação de contas (Salvas no Banco de Dados);
 - Login seguro com validação de senha;
 - Depósitos e Saques (Atualização imediata no DB);
+- Transferências Entre Contas utilizando Transferências Atômicas (ACID);
+- Rollback para Evitar Imprevistos em Transferências;
 - Trava de segurança em saques acima de R$200,00;
 - Extrato detalhado (V2.0 Upgrade: Extrato PERMANENTE);
-- Tratamento de Erros com Códigos Personalizados (Ex: ERRO D-001-02 (Documentação No Final da Página));
+- Tratamento de Erros com Códigos Personalizados (Ex: ERRO D-001-02 (Documentação No Final da Página)).
 
 ## 🛠️ TECNOLOGIAS UTILIZADAS:
 - Python 3
