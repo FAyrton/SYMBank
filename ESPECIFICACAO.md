@@ -64,6 +64,7 @@ Códigos internos para debug e manutenção.
 
 ### Validação de Segurança (D-001-03)
 Para qualquer operação de **Saque** onde o valor seja **superior a R$ 200,00**, o sistema deve obrigatoriamente solicitar a senha do usuário novamente para confirmar a transação.
+Para qualquer operação de **Transferência**, o sistema deve obrigatoriamente solicitar a senha do usuário novamente para confirmar a transação.
 
 ### Paginação de Extrato (D-003-02)
 Para evitar poluição visual, o extrato deve exibir no máximo as **últimas 20 transações**.
